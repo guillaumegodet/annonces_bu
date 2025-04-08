@@ -1,45 +1,12 @@
+
 import streamlit as st
 from st_audiorec import st_audiorec
 import tempfile
 import os
 import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 from datetime import datetime
 
-# Configuration de l'email
-def send_email_with_attachment(subject, body, to_email, file_path):
-    # Informations SMTP (exemple avec Gmail)
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
-    smtp_user = "budroitnantesuniv@gmail.com"
-    smtp_password = "123456Nu$"
 
-    # Créer le message
-    msg = MIMEMultipart()
-    msg['From'] = smtp_user
-    msg['To'] = to_email
-    msg['Subject'] = subject
-
-    # Ajouter le corps de l'email
-    msg.attach(MIMEText(body, 'plain'))
-
-    # Ajouter la pièce jointe
-    attachment = open(file_path, "rb")
-    part = MIMEBase('application', 'octet-stream')
-    part.set_payload((attachment).read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition', f'attachment; filename= {os.path.basename(file_path)}')
-    msg.attach(part)
-
-    # Envoyer l'email
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(smtp_user, smtp_password)
-    server.sendmail(smtp_user, to_email, msg.as_string())
-    server.quit()
 
 # Titre de l'application
 st.title("Une nouvelle annonce sonore pour la BU Droit !")
@@ -75,15 +42,9 @@ with st.form(key='form_30'):
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, f"Message_30_minutes_{timestamp}.wav")
         os.rename(temp_file_path, output_path)
-        st.success(f"Merci pour votre participation votre annonce a été transmise à l'équipe de la BU !")
+        st.success(f"Merci pour votre participation votre message a été tranféré à l'équipe de la BU")
 
-        # Envoyer l'email avec le fichier en pièce jointe
-        send_email_with_attachment(
-            subject="Nouvelle annonce sonore",
-            body="Veuillez trouver ci-joint le fichier audio de l'annonce.",
-            to_email="guillaume.godet@univ-nantes.fr",
-            file_path=output_path
-        )
+       
 # Message 10 minutes
 with st.form(key='form_10'):
     st.subheader("Message 10 minutes")
