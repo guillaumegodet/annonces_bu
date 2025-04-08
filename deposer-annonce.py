@@ -1,19 +1,16 @@
-
 import streamlit as st
 from st_audiorec import st_audiorec
 import tempfile
 import os
-import smtplib
+import shutil
 from datetime import datetime
-
-
 
 # Titre de l'application
 st.title("Une nouvelle annonce sonore pour la BU Droit !")
 
 # Descriptif
 st.write("""
-"La bibliothèque ferme dans 30 minutes. A votre départ, merci de repousser votre chaise et de laisser votre place propre.
+"La bibliothèque ferme dans 30 minutes. À votre départ, merci de repousser votre chaise et de laisser votre place propre.
 Nous serons heureux de vous accueillir demain matin à partir de 9h et jusqu'à 13h. Bonne soirée."
 Si vous fréquentez la BU le soir avant la fermeture, vous avez l'habitude d'être interrompus dans votre travail par ce type de message.
 Et si vous faisiez entendre votre voix en participant au renouvellement de ces annonces ?
@@ -41,10 +38,10 @@ with st.form(key='form_30'):
         output_dir = "annonces"
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, f"Message_30_minutes_{timestamp}.wav")
-        os.rename(temp_file_path, output_path)
-        st.success(f"Merci pour votre participation votre message a été tranféré à l'équipe de la BU")
 
-       
+        # Utiliser shutil.move pour déplacer le fichier
+        shutil.move(temp_file_path, output_path)
+        st.success(f"Votre message 'Message 30 minutes' a été enregistré avec succès dans {output_path}")
 # Message 10 minutes
 with st.form(key='form_10'):
     st.subheader("Message 10 minutes")
