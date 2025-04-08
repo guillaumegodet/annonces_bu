@@ -75,7 +75,7 @@ with st.form(key='form_30'):
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, f"Message_30_minutes_{timestamp}.wav")
         os.rename(temp_file_path, output_path)
-        st.success(f"Votre message 'Message 30 minutes' a été enregistré avec succès dans {output_path}")
+        st.success(f"Merci pour votre participation votre annonce a été transmise à l'équipe de la BU !")
 
         # Envoyer l'email avec le fichier en pièce jointe
         send_email_with_attachment(
