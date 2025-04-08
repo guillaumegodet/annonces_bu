@@ -1,6 +1,5 @@
 
-# projet participatif de renouvellement des annonces sonores de la BU Droit par ses usagers
-
+# projet participatif de renouvellement des annonces sonores de la BU Droit de Nantes Université 
 ## Installation
 
 Pour exécuter cette application localement, suivez les étapes ci-dessous :
