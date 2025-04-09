@@ -1,4 +1,3 @@
 streamlit
-st-audiorec
 google-auth
 google-api-python-client
