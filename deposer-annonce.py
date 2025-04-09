@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  9 12:19:16 2025
 
-@author: godet-g
-"""
 
 import streamlit as st
 from st_audiorec import st_audiorec
@@ -23,14 +19,34 @@ credentials = service_account.Credentials.from_service_account_info(
 )
 drive_service = build('drive', 'v3', credentials=credentials)
 
+# Fonction pour créer un sous-dossier si nécessaire
+def create_subfolder(folder_name, parent_folder_id):
+    query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and '{parent_folder_id}' in parents and trashed=false"
+    results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+    items = results.get('files', [])
+    if items:
+        return items[0]['id']
+    else:
+        file_metadata = {
+            'name': folder_name,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [parent_folder_id]
+        }
+        file = drive_service.files().create(body=file_metadata, fields='id').execute()
+        return file.get('id')
+
 # Fonction pour uploader un fichier sur Google Drive
 def upload_to_drive(file_path, folder_id):
-    file_metadata = {'name': os.path.basename(file_path), 'parents': [folder_id]}
-    media = MediaFileUpload(file_path, mimetype='audio/wav')
-    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-    return file.get('id')
+    try:
+        file_metadata = {'name': os.path.basename(file_path), 'parents': [folder_id]}
+        media = MediaFileUpload(file_path, mimetype='audio/wav')
+        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        return file.get('id')
+    except Exception as e:
+        st.error(f"Erreur lors de l'upload sur Google Drive : {e}")
+        return None
 
-# ID du dossier Google Drive
+# ID du dossier Google Drive principal
 FOLDER_ID = '1_2InKzKskt1q-0S9HFWXlap380QF4hi2'
 
 # Titre et description
@@ -41,7 +57,6 @@ Enregistrez ces annonces sonores sur votre téléphone, transmettez-nous les fic
 """)
 
 # Fonction générique pour un formulaire d'enregistrement
-
 def enregistrer_annonce(titre_formulaire, nom_fichier, texte_annonce):
     with st.form(key=f'form_{nom_fichier}'):
         st.subheader(titre_formulaire)
@@ -62,13 +77,18 @@ def enregistrer_annonce(titre_formulaire, nom_fichier, texte_annonce):
             output_path = os.path.join(output_dir, f"{nom_fichier}_{timestamp}.wav")
             shutil.move(temp_file_path, output_path)
 
-            # Upload Google Drive
-            upload_to_drive(output_path, FOLDER_ID)
+            # Créer ou obtenir le sous-dossier
+            subfolder_id = create_subfolder(nom_fichier, FOLDER_ID)
 
-            # Confirmation visuelle
-            st.success(f"Merci pour votre participation ! Votre annonce sonore '{titre_formulaire}' a été transmise à l'équipe de la BU.")
-            st.toast("Message envoyé ! ", icon="✅")
-            st.balloons()
+            # Upload Google Drive
+            file_id = upload_to_drive(output_path, subfolder_id)
+            if file_id:
+                # Confirmation visuelle
+                st.success(f"Merci pour votre participation ! Votre message '{titre_formulaire}' a bien été envoyé.")
+                st.toast("Message envoyé ! ", icon="✅")
+                st.balloons()
+            else:
+                st.error("L'upload du fichier a échoué. Veuillez réessayer.")
 
 # Formulaires
 annonces = [
