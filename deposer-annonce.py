@@ -1,197 +1,86 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Apr  9 12:19:16 2025
+
+@author: godet-g
+"""
+
 import streamlit as st
 from st_audiorec import st_audiorec
 import tempfile
 import os
 import shutil
 from datetime import datetime
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
-# Titre de l'application
+# Authentification Google Drive via secrets
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+service_account_info = st.secrets["gcp_service_account"]
+credentials = service_account.Credentials.from_service_account_info(
+    dict(service_account_info), scopes=SCOPES
+)
+drive_service = build('drive', 'v3', credentials=credentials)
+
+# Fonction pour uploader un fichier sur Google Drive
+def upload_to_drive(file_path, folder_id):
+    file_metadata = {'name': os.path.basename(file_path), 'parents': [folder_id]}
+    media = MediaFileUpload(file_path, mimetype='audio/wav')
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    return file.get('id')
+
+# ID du dossier Google Drive
+FOLDER_ID = '1_2InKzKskt1q-0S9HFWXlap380QF4hi2'
+
+# Titre et description
 st.title("Une nouvelle annonce sonore pour la BU Droit !")
-
-# Descriptif
 st.write("""
-"La bibliothèque ferme dans 30 minutes. À votre départ, merci de repousser votre chaise et de laisser votre place propre.
-Nous serons heureux de vous accueillir demain matin à partir de 9h et jusqu'à 13h. Bonne soirée."
-Si vous fréquentez la BU le soir avant la fermeture, vous avez l'habitude d'être interrompus dans votre travail par ce type de message.
-Et si vous faisiez entendre votre voix en participant au renouvellement de ces annonces ?
-Enregistrez ces annonces sonores sur votre téléphone, transmettez-nous les fichiers ici et vous aurez la chance d'entendre votre annonce résonner dans toute la BU !
+"La bibliothèque ferme dans 30 minutes..."
+Enregistrez ces annonces sonores sur votre téléphone, transmettez-nous les fichiers ici et vous aurez la chance de les entendre à la BU !
 """)
 
-# Message 30 minutes
-with st.form(key='form_30'):
-    st.subheader("Message 30 minutes")
-    st.write("La bibliothèque ferme dans 30 minutes. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée.")
-    wav_audio_data_30 = st_audiorec()
-    submit_button_30 = st.form_submit_button(label='Valider et envoyer')
+# Fonction générique pour un formulaire d'enregistrement
 
-    if submit_button_30 and wav_audio_data_30 is not None:
-        st.audio(wav_audio_data_30, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_30)
-            temp_file_path = temp_file.name
+def enregistrer_annonce(titre_formulaire, nom_fichier, texte_annonce):
+    with st.form(key=f'form_{nom_fichier}'):
+        st.subheader(titre_formulaire)
+        st.write(texte_annonce)
+        audio_data = st_audiorec()
+        submit_button = st.form_submit_button(label='Valider et envoyer')
 
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
+        if submit_button and audio_data is not None:
+            st.audio(audio_data, format='audio/wav')
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+                temp_file.write(audio_data)
+                temp_file_path = temp_file.name
+            temp_file.close()
 
-        # Ajouter un horodatage au nom du fichier
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, f"Message_30_minutes_{timestamp}.wav")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = "annonces"
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, f"{nom_fichier}_{timestamp}.wav")
+            shutil.move(temp_file_path, output_path)
 
-        # Utiliser shutil.move pour déplacer le fichier
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'Message 30 minutes' a été enregistré avec succès dans {output_path}")
-# Message 10 minutes
-with st.form(key='form_10'):
-    st.subheader("Message 10 minutes")
-    st.write("La bibliothèque ferme dans 10 minutes. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Nous serons heureux de vous accueillir demain matin à partir de 8h30. Bonne soirée.")
-    wav_audio_data_10 = st_audiorec()
-    submit_button_10 = st.form_submit_button(label='Valider et envoyer')
+            # Upload Google Drive
+            upload_to_drive(output_path, FOLDER_ID)
 
-    if submit_button_10 and wav_audio_data_10 is not None:
-        st.audio(wav_audio_data_10, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_10)
-            temp_file_path = temp_file.name
+            # Confirmation visuelle
+            st.success(f"Merci pour votre participation ! Votre message '{titre_formulaire}' a bien été envoyé.")
+            st.toast("Message envoyé ! ", icon="✅")
+            st.balloons()
 
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
+# Formulaires
+annonces = [
+    ("Message 30 minutes", "Message_30_minutes", "La bibliothèque ferme dans 30 minutes. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée."),
+    ("Message 10 minutes", "Message_10_minutes", "La bibliothèque ferme dans 10 minutes. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Nous serons heureux de vous accueillir demain matin à partir de 8h30. Bonne soirée."),
+    ("Samedi ou vendredi sans samedi", "Message_samedi", "La bibliothèque ferme dans 10 minutes. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Nous serons heureux de vous accueillir lundi matin à partir de 8h30. Bonne soirée."),
+    ("NoctamBU 18h30", "NoctamBU_18h30", "Le service NoctamBU débute dans 30 minutes. Si vous ne souhaitez pas rester et que vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée."),
+    ("NoctamBU 19h05", "NoctamBU_19h05", "La bibliothèque fonctionne désormais en horaires NoctamBU. Les prêts et les retours restent possibles pendant la soirée."),
+    ("NoctamBU 21h30", "NoctamBU_21h30", "La fermeture de la bibliothèque débutera dans 15 minutes. Merci de commencer à rassembler vos affaires afin de vous préparer à partir. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée."),
+    ("NoctamBU 21h45", "NoctamBU_21h45", "La bibliothèque est en cours de fermeture. Merci de rassembler vos affaires et de vous diriger vers la sortie. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée."),
+    ("Vendredi de NoctamBU", "Vendredi_NoctamBU", "La bibliothèque est en cours de fermeture. Merci de rassembler vos affaires et de vous diriger vers la sortie. Nous vous retrouverons demain, de 9h à 13h. Bonne fin de soirée.")
+]
 
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "Message 10 minutes.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'Message 10 minutes' a été enregistré avec succès dans {output_path}")
-
-# Message samedi 10 minutes et vendredi quand samedi fermé
-with st.form(key='form_samedi'):
-    st.subheader("Message samedi 10 minutes et vendredi quand samedi fermé")
-    st.write("La bibliothèque ferme dans 10 minutes. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Nous serons heureux de vous accueillir lundi matin à partir de 8h30. Bonne soirée.")
-    wav_audio_data_samedi = st_audiorec()
-    submit_button_samedi = st.form_submit_button(label='Valider et envoyer')
-
-    if submit_button_samedi and wav_audio_data_samedi is not None:
-        st.audio(wav_audio_data_samedi, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_samedi)
-            temp_file_path = temp_file.name
-
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
-
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "Message samedi 10 minutes et vendredi quand samedi fermé.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'Message samedi 10 minutes et vendredi quand samedi fermé' a été enregistré avec succès dans {output_path}")
-
-# NoctamBU 18h30
-with st.form(key='form_noctambu_18h30'):
-    st.subheader("NoctamBU 18h30")
-    st.write("Le service NoctamBU débute dans 30 minutes. Si vous ne souhaitez pas rester et que vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée.")
-    wav_audio_data_noctambu_18h30 = st_audiorec()
-    submit_button_noctambu_18h30 = st.form_submit_button(label='Valider et envoyer')
-
-    if submit_button_noctambu_18h30 and wav_audio_data_noctambu_18h30 is not None:
-        st.audio(wav_audio_data_noctambu_18h30, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_noctambu_18h30)
-            temp_file_path = temp_file.name
-
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
-
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "NoctamBU 18h30.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'NoctamBU 18h30' a été enregistré avec succès dans {output_path}")
-
-# NoctamBU 19h05
-with st.form(key='form_noctambu_19h05'):
-    st.subheader("NoctamBU 19h05")
-    st.write("La bibliothèque fonctionne désormais en horaires NoctamBU. Les prêts et les retours restent possibles pendant la soirée.")
-    wav_audio_data_noctambu_19h05 = st_audiorec()
-    submit_button_noctambu_19h05 = st.form_submit_button(label='Valider et envoyer')
-
-    if submit_button_noctambu_19h05 and wav_audio_data_noctambu_19h05 is not None:
-        st.audio(wav_audio_data_noctambu_19h05, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_noctambu_19h05)
-            temp_file_path = temp_file.name
-
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
-
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "NoctamBU 19h05.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'NoctamBU 19h05' a été enregistré avec succès dans {output_path}")
-
-# NoctamBU 21h30
-with st.form(key='form_noctambu_21h30'):
-    st.subheader("NoctamBU 21h30")
-    st.write("La fermeture de la bibliothèque débutera dans 15 minutes. Merci de commencer à rassembler vos affaires afin de vous préparer à partir. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée.")
-    wav_audio_data_noctambu_21h30 = st_audiorec()
-    submit_button_noctambu_21h30 = st.form_submit_button(label='Valider et envoyer')
-
-    if submit_button_noctambu_21h30 and wav_audio_data_noctambu_21h30 is not None:
-        st.audio(wav_audio_data_noctambu_21h30, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_noctambu_21h30)
-            temp_file_path = temp_file.name
-
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
-
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "NoctamBU 21h30.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'NoctamBU 21h30' a été enregistré avec succès dans {output_path}")
-
-# NoctamBU 21h45
-with st.form(key='form_noctambu_21h45'):
-    st.subheader("NoctamBU 21h45")
-    st.write("La bibliothèque est en cours de fermeture. Merci de rassembler vos affaires et de vous diriger vers la sortie. Quand vous quittez la BU, merci de repousser votre chaise et de laisser votre place propre. Bonne soirée.")
-    wav_audio_data_noctambu_21h45 = st_audiorec()
-    submit_button_noctambu_21h45 = st.form_submit_button(label='Valider et envoyer')
-
-    if submit_button_noctambu_21h45 and wav_audio_data_noctambu_21h45 is not None:
-        st.audio(wav_audio_data_noctambu_21h45, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_noctambu_21h45)
-            temp_file_path = temp_file.name
-
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
-
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "NoctamBU 21h45.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'NoctamBU 21h45' a été enregistré avec succès dans {output_path}")
-
-# Vendredi de NoctamBU, à 21h45
-with st.form(key='form_vendredi'):
-    st.subheader("Vendredi de NoctamBU, à 21h45")
-    st.write("La bibliothèque est en cours de fermeture. Merci de rassembler vos affaires et de vous diriger vers la sortie. Nous vous retrouverons demain, de 9h à 13h. Bonne fin de soirée.")
-    wav_audio_data_vendredi = st_audiorec()
-    submit_button_vendredi = st.form_submit_button(label='Valider et envoyer')
-
-    if submit_button_vendredi and wav_audio_data_vendredi is not None:
-        st.audio(wav_audio_data_vendredi, format='audio/wav')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-            temp_file.write(wav_audio_data_vendredi)
-            temp_file_path = temp_file.name
-
-        # Fermer le fichier avant de le déplacer
-        temp_file.close()
-
-        output_dir = "annonces"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, "Vendredi de NoctamBU, à 21h45.wav")
-        shutil.move(temp_file_path, output_path)
-        st.success(f"Votre message 'Vendredi de NoctamBU, à 21h45' a été enregistré avec succès dans {output_path}")
+for titre, fichier, texte in annonces:
+    enregistrer_annonce(titre, fichier, texte)
