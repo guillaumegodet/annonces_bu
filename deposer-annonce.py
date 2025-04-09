@@ -66,7 +66,7 @@ def enregistrer_annonce(titre_formulaire, nom_fichier, texte_annonce):
             upload_to_drive(output_path, FOLDER_ID)
 
             # Confirmation visuelle
-            st.success(f"Merci pour votre participation ! Votre message '{titre_formulaire}' a bien été envoyé.")
+            st.success(f"Merci pour votre participation ! Votre annonce sonore '{titre_formulaire}' a été transmise à l'équipe de la BU.")
             st.toast("Message envoyé ! ", icon="✅")
             st.balloons()
 
