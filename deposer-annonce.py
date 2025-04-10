@@ -53,8 +53,8 @@ FOLDER_ID = '1_2InKzKskt1q-0S9HFWXlap380QF4hi2'
 st.title("📢 Une nouvelle annonce sonore pour la BU Droit !")
 st.write("""> La bibliothèque ferme dans 30 minutes. A votre départ, merci de repousser votre chaise et de laisser votre place propre. Nous serons heureux de vous accueillir demain matin à partir de 9h et jusqu'à 13h. Bonne soirée.
 
-Si vous fréquentez la BU le soir vers 18h30, vous avez l'habitude d'entendre ce type de message. Et si vous faisiez entendre votre voix en renouvellement ces annonces sonores ?  
-Enregistrez vos annonces ici et vous aurez peut-être la chance d'entendre votre belle voix résonner le soir dans toute la BU !""")
+Si vous fréquentez la BU le soir vers 18h30, vous avez l'habitude d'entendre ce type de message. Et si vous faisiez entendre votre voix en participant à l'enregistrement de ces annonces ?  
+Cliquez sur "Start recording" puis sur "Stop" quand vous avez terminé la lecture du message, validez et vous aurez peut-être la chance d'entendre votre voix résonner le soir dans toute la BU !""")
 
 # Fonction générique pour un formulaire d'enregistrement
 def enregistrer_annonce(titre_formulaire, nom_fichier, texte_annonce):
